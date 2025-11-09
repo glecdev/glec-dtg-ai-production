@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚛 DTG 3D Truck Viewer - 1280×480 Optimized</title>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: radial-gradient(ellipse at center, #001122 0%, #000000 100%);
+        }
+        
+        /* DTG 1280×480 최적화 컨트롤 패널 */
+        .dtg-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .dtg-btn {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+        
+        .dtg-btn:hover {
+            background: rgba(0, 255, 255, 0.4);
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+            transform: translateY(-1px);
+        }
+        
+        .dtg-btn.active {
+            background: rgba(0, 255, 255, 0.6);
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+        
+        /* 상태 표시 */
+        .dtg-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 40, 60, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            backdrop-filter: blur(10px);
+            max-width: 200px;
+        }
+        
+        .status-item {
+            margin: 2px 0;
+            color: #00ffff;
+        }
+        
+        /* 로딩 인디케이터 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #00ffff;
+            font-size: 16px;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-top: 2px solid #00ffff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 모바일 최적화 */
+        @media (max-width: 1300px) {
+            .dtg-btn {
+                padding: 4px 8px;
+                font-size: 9px;
+            }
+            .dtg-status {
+                font-size: 10px;
+                padding: 6px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 로딩 인디케이터 -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <div>3D 트럭 모델 로딩 중...</div>
+    </div>
+    
+    <!-- 3D Canvas -->
+    <canvas id="canvas"></canvas>
+    
+    <!-- DTG 컨트롤 버튼들 -->
+    <div class="dtg-controls">
+        <button id="xrayBtn" class="dtg-btn">X-Ray</button>
+        <button id="rotateBtn" class="dtg-btn">회전</button>
+        <button id="resetBtn" class="dtg-btn">리셋</button>
+        <button id="colorBtn" class="dtg-btn">색상</button>
+        <button id="gridBtn" class="dtg-btn">그리드</button>
+        <button id="focusEngineBtn" class="dtg-btn">엔진</button>
+        <button id="focusTiresBtn" class="dtg-btn">타이어</button>
+    </div>
+    
+    <!-- 상태 패널 -->
+    <div class="dtg-status" id="statusPanel">
+        <div class="status-item">모델: 로딩 중...</div>
+        <div class="status-item">FPS: --</div>
+        <div class="status-item">상태: 준비 중</div>
+    </div>
+
+    <!-- Three.js 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // DTG 3D Viewer 메인 클래스
+        class DTG3DViewer {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.currentModel = null;
+                this.isXRayMode = false;
+                this.isAutoRotating = false;
+                this.showGrid = true;
+                this.currentColorIndex = 0;
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                this.fps = 0;
+                
+                // Phase 3: 고급 성능 모니터링
+                this.performanceStats = {
+                    frameTime: 0,
+                    memoryUsage: 0,
+                    renderCalls: 0,
+                    triangleCount: 0,
+                    bufferGeometries: 0,
+                    textures: 0
+                };
+                
+                this.fpsHistory = [];
+                this.frameTimeHistory = [];
+                
+                // DTG CAN Bus 데이터 저장
+                this.canBusData = {
+                    engineTemp: 75,
+                    speed: 80,
+                    rpm: 2400,
+                    fuelLevel: 65,
+                    tirePressure: [32, 32, 30, 31],
+                    timestamp: Date.now()
+                };
+                
+                this.wireframeColors = [
+                    0x00ffff, // Cyan (기본)
+                    0xff00ff, // Magenta
+                    0xffff00, // Yellow
+                    0x00ff00, // Green
+                    0xff6600, // Orange
+                    0xff0080  // Pink
+                ];
+                
+                this.initThreeJS();
+                this.setupEventListeners();
+                this.loadTruckModel();
+                this.startRenderLoop();
+            }
+            
+            initThreeJS() {
+                // 씬 생성
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                
+                // 카메라 설정 (DTG 1280×480 비율 최적화)
+                const canvas = document.getElementById('canvas');
+                this.camera = new THREE.PerspectiveCamera(
+                    60, 
+                    canvas.clientWidth / canvas.clientHeight,
+                    0.1, 
+                    1000
+                );
+                this.camera.position.set(8, 6, 8);
+                
+                // 렌더러 설정 (Phase 3: 고급 모바일 최적화)
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: canvas,
+                    antialias: false, // 성능을 위해 비활성화
+                    alpha: false,
+                    powerPreference: "high-performance", // 고성능 GPU 우선
+                    stencil: false, // 불필요한 버퍼 비활성화
+                    depth: true,
+                    premultipliedAlpha: false
+                });
+                
+                this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 픽셀 비율 제한
+                this.renderer.shadowMap.enabled = false; // 성능을 위해 비활성화
+                
+                // Phase 3: 추가 렌더러 최적화
+                this.renderer.sortObjects = false; // 정렬 비활성화로 성능 향상
+                this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+                
+                // 렌더러 성능 정보 수집
+                this.renderer.info.autoReset = false;
+                
+                // 조명 설정
+                const ambientLight = new THREE.AmbientLight(0x404040, 1.2);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                directionalLight.position.set(10, 10, 5);
+                this.scene.add(directionalLight);
+                
+                // 추가 조명 (X-Ray 효과 향상)
+                const frontLight = new THREE.DirectionalLight(0x00ffff, 0.3);
+                frontLight.position.set(0, 0, 10);
+                this.scene.add(frontLight);
+                
+                // 컨트롤 설정
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxDistance = 30;
+                this.controls.minDistance = 3;
+                
+                // 그리드 생성
+                this.gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x444444);
+                this.scene.add(this.gridHelper);
+                
+                this.hideLoading();
+            }
+            
+            async loadTruckModel() {
+                const loader = new THREE.GLTFLoader();
+                
+                // 현대 포터 트럭 모델 (기본값)
+                const modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf';
+                
+                try {
+                    const gltf = await this.loadModelPromise(loader, modelUrl);
+                    this.processLoadedModel(gltf, 'Porter Truck');
+                } catch (error) {
+                    console.error('모델 로딩 실패:', error);
+                    this.showStatus('모델 로딩 실패', 'error');
+                }
+            }
+            
+            loadModelPromise(loader, url) {
+                return new Promise((resolve, reject) => {
+                    loader.load(url, resolve, undefined, reject);
+                });
+            }
+            
+            processLoadedModel(gltf, modelName) {
+                // 기존 모델 제거
+                if (this.currentModel) {
+                    this.scene.remove(this.currentModel);
+                }
+                
+                this.currentModel = gltf.scene;
+                
+                // 모델 크기 및 위치 조정
+                this.normalizeModel(this.currentModel);
+                
+                // 포터 트럭의 경우 하단 박스 제거
+                if (modelName.includes('Porter') || modelName.includes('Milk')) {
+                    this.removePorterBoxes(this.currentModel);
+                }
+                
+                this.scene.add(this.currentModel);
+                this.showStatus(`${modelName} 로드됨`, 'success');
+                
+                // Android로 로딩 완료 알림
+                if (typeof DTGAndroid !== 'undefined') {
+                    DTGAndroid.sendMessage(`model_loaded:${modelName}`);
+                }
+            }
+            
+            normalizeModel(model) {
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+                
+                // 모델 크기 정규화 (최대 6 단위)
+                const maxDimension = Math.max(size.x, size.y, size.z);
+                const scale = 6 / maxDimension;
+                model.scale.setScalar(scale);
+                
+                // 중앙 정렬
+                model.position.x = -center.x * scale;
+                model.position.z = -center.z * scale;
+                
+                // 지면에 정확히 배치
+                const scaledBox = new THREE.Box3().setFromObject(model);
+                model.position.y = -scaledBox.min.y;
+            }
+            
+            removePorterBoxes(model) {
+                const boxesToRemove = [];
+                
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        const geometry = child.geometry;
+                        if (geometry && geometry.attributes.position) {
+                            const positions = geometry.attributes.position.array;
+                            const vertexCount = positions.length / 3;
+                            
+                            if (vertexCount < 100) { // 저폴리곤 메시
+                                const bbox = new THREE.Box3().setFromObject(child);
+                                const size = bbox.getSize(new THREE.Vector3());
+                                
+                                // 평평한 박스 감지
+                                if ((size.y < size.x * 0.15 && size.y < size.z * 0.15) && bbox.min.y < -1) {
+                                    boxesToRemove.push(child);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 박스 제거
+                let totalBoxHeight = 0;
+                boxesToRemove.forEach(box => {
+                    const bbox = new THREE.Box3().setFromObject(box);
+                    totalBoxHeight = Math.max(totalBoxHeight, bbox.max.y - bbox.min.y);
+                    box.visible = false;
+                });
+                
+                // 박스 높이만큼 모델을 아래로 이동
+                if (totalBoxHeight > 0) {
+                    model.position.y -= totalBoxHeight;
+                }
+                
+                console.log(`제거된 박스: ${boxesToRemove.length}개, 높이: ${totalBoxHeight.toFixed(2)}`);
+            }
+            
+            setupEventListeners() {
+                // X-Ray 모드
+                document.getElementById('xrayBtn').addEventListener('click', () => {
+                    this.toggleXRayMode();
+                });
+                
+                // 회전
+                document.getElementById('rotateBtn').addEventListener('click', () => {
+                    this.toggleAutoRotation();
+                });
+                
+                // 카메라 리셋
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.resetCamera();
+                });
+                
+                // 와이어프레임 색상 변경
+                document.getElementById('colorBtn').addEventListener('click', () => {
+                    this.changeWireframeColor();
+                });
+                
+                // 그리드 토글
+                document.getElementById('gridBtn').addEventListener('click', () => {
+                    this.toggleGrid();
+                });
+                
+                // 엔진 포커스
+                document.getElementById('focusEngineBtn').addEventListener('click', () => {
+                    this.focusOnPart('engine');
+                });
+                
+                // 타이어 포커스
+                document.getElementById('focusTiresBtn').addEventListener('click', () => {
+                    this.focusOnPart('wheels');
+                });
+                
+                // 창 크기 변경 대응
+                window.addEventListener('resize', () => {
+                    this.onWindowResize();
+                });
+                
+                // Phase 3: 터치/마우스 인터랙션 이벤트 설정
+                this.setupTouchInteraction();
+            }
+            
+            toggleXRayMode() {
+                this.isXRayMode = !this.isXRayMode;
+                const btn = document.getElementById('xrayBtn');
+                btn.classList.toggle('active', this.isXRayMode);
+                
+                if (this.currentModel) {
+                    this.applyXRayEffect(this.currentModel);
+                }
+            }
+            
+            applyXRayEffect(model) {
+                const currentColor = this.wireframeColors[this.currentColorIndex];
+                
+                model.traverse((child) => {
+                    if (child.isMesh && child.visible) {
+                        if (this.isXRayMode) {
+                            // X-Ray 모드: 와이어프레임 + 반투명
+                            const edges = new THREE.EdgesGeometry(child.geometry);
+                            const lineMaterial = new THREE.LineBasicMaterial({ 
+                                color: currentColor,
+                                linewidth: 1
+                            });
+                            const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                            child.add(wireframe);
+                            
+                            // 원래 메시를 반투명하게
+                            if (child.material) {
+                                child.material.transparent = true;
+                                child.material.opacity = 0.1;
+                            }
+                        } else {
+                            // 일반 모드
+                            child.children = child.children.filter(c => c.type !== 'LineSegments');
+                            if (child.material) {
+                                child.material.transparent = false;
+                                child.material.opacity = 1.0;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            toggleAutoRotation() {
+                this.isAutoRotating = !this.isAutoRotating;
+                const btn = document.getElementById('rotateBtn');
+                btn.classList.toggle('active', this.isAutoRotating);
+            }
+            
+            changeWireframeColor() {
+                this.currentColorIndex = (this.currentColorIndex + 1) % this.wireframeColors.length;
+                
+                if (this.isXRayMode && this.currentModel) {
+                    this.applyXRayEffect(this.currentModel);
+                }
+            }
+            
+            toggleGrid() {
+                this.showGrid = !this.showGrid;
+                this.gridHelper.visible = this.showGrid;
+                const btn = document.getElementById('gridBtn');
+                btn.classList.toggle('active', this.showGrid);
+            }
+            
+            resetCamera() {
+                this.camera.position.set(8, 6, 8);
+                this.camera.lookAt(0, 0, 0);
+                this.controls.reset();
+            }
+            
+            focusOnPart(partName) {
+                // 특정 부위에 카메라 포커스
+                if (partName === 'engine') {
+                    this.camera.position.set(5, 3, 5);
+                } else if (partName === 'wheels') {
+                    this.camera.position.set(8, 2, 8);
+                }
+                this.camera.lookAt(0, 0, 0);
+            }
+            
+            onWindowResize() {
+                const canvas = document.getElementById('canvas');
+                this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            }
+            
+            startRenderLoop() {
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    
+                    // 자동 회전
+                    if (this.isAutoRotating && this.currentModel) {
+                        this.currentModel.rotation.y += 0.005;
+                    }
+                    
+                    // 컨트롤 업데이트
+                    this.controls.update();
+                    
+                    // 렌더링
+                    this.renderer.render(this.scene, this.camera);
+                    
+                    // FPS 계산
+                    this.updateFPS();
+                };
+                animate();
+            }
+            
+            updateFPS() {
+                this.frameCount++;
+                const now = performance.now();
+                const frameTime = now - this.lastFrameTime || 16.7;
+                
+                // FPS 및 프레임 시간 히스토리 업데이트 (최근 60개 프레임)
+                this.frameTimeHistory.push(frameTime);
+                if (this.frameTimeHistory.length > 60) {
+                    this.frameTimeHistory.shift();
+                }
+                
+                if (now - this.lastTime >= 1000) {
+                    this.fps = Math.round((this.frameCount * 1000) / (now - this.lastTime));
+                    
+                    // FPS 히스토리 업데이트 (최근 10초)
+                    this.fpsHistory.push(this.fps);
+                    if (this.fpsHistory.length > 10) {
+                        this.fpsHistory.shift();
+                    }
+                    
+                    // Phase 3: 고급 성능 통계 수집
+                    this.updatePerformanceStats(frameTime);
+                    
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                    
+                    this.updateStatusDisplay();
+                    
+                    // Android로 고급 성능 정보 전송
+                    if (typeof DTGAndroid !== 'undefined') {
+                        const avgFrameTime = this.frameTimeHistory.reduce((a, b) => a + b, 0) / this.frameTimeHistory.length;
+                        
+                        // 기본 성능 정보
+                        DTGAndroid.reportPerformance(this.fps, avgFrameTime);
+                        
+                        // Phase 3: 상세 성능 정보 전송 (새로운 함수)
+                        if (typeof DTGAndroid.reportDetailedPerformance === 'function') {
+                            DTGAndroid.reportDetailedPerformance(
+                                this.fps,
+                                avgFrameTime,
+                                this.performanceStats.renderCalls || 0,
+                                this.performanceStats.triangleCount || 0,
+                                Math.round(this.performanceStats.memoryUsage / (1024 * 1024)) || 0 // MB 단위 변환
+                            );
+                        }
+                        
+                        // 종합 성능 정보 로깅
+                        DTGAndroid.logMessage('Performance', JSON.stringify({
+                            fps: this.fps,
+                            avgFps: this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length,
+                            frameTime: avgFrameTime,
+                            performanceLevel: this.fps >= 30 ? 'Good' : this.fps >= 20 ? 'Fair' : 'Poor',
+                            ...this.performanceStats
+                        }));
+                    }
+                }
+                
+                this.lastFrameTime = now;
+            }
+            
+            // Phase 3: 성능 통계 업데이트
+            updatePerformanceStats(frameTime) {
+                if (!this.renderer) return;
+                
+                // 렌더러 정보 업데이트
+                const info = this.renderer.info;
+                
+                this.performanceStats = {
+                    frameTime: frameTime,
+                    memoryUsage: info.memory ? info.memory.geometries + info.memory.textures : 0,
+                    renderCalls: info.render.calls,
+                    triangleCount: info.render.triangles,
+                    bufferGeometries: info.memory ? info.memory.geometries : 0,
+                    textures: info.memory ? info.memory.textures : 0
+                };
+                
+                // 성능 경고 체크
+                this.checkPerformanceWarnings();
+                
+                // 렌더러 정보 리셋 (다음 프레임을 위해)
+                info.reset();
+            }
+            
+            // 성능 경고 체크
+            checkPerformanceWarnings() {
+                const warnings = [];
+                
+                if (this.fps < 20) {
+                    warnings.push('낮은 FPS 감지');
+                }
+                
+                if (this.performanceStats.frameTime > 33) {
+                    warnings.push('높은 프레임 시간');
+                }
+                
+                if (this.performanceStats.renderCalls > 100) {
+                    warnings.push('과도한 렌더 콜');
+                }
+                
+                if (warnings.length > 0) {
+                    console.warn('Performance warnings:', warnings.join(', '));
+                    
+                    // Android에 성능 경고 전송
+                    if (typeof DTGAndroid !== 'undefined') {
+                        DTGAndroid.logMessage('PerformanceWarning', warnings.join(', '));
+                    }
+                }
+            }
+            
+            updateStatusDisplay() {
+                const statusPanel = document.getElementById('statusPanel');
+                statusPanel.innerHTML = `
+                    <div class="status-item">모델: Porter Truck</div>
+                    <div class="status-item">FPS: ${this.fps}</div>
+                    <div class="status-item">X-Ray: ${this.isXRayMode ? 'ON' : 'OFF'}</div>
+                `;
+            }
+            
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.style.display = 'none';
+                }
+            }
+            
+            showStatus(message, type) {
+                console.log(`[DTG3D] ${type.toUpperCase()}: ${message}`);
+            }
+            
+            // Android에서 호출되는 CAN Bus 데이터 업데이트
+            updateTruckFromCANData(canData) {
+                this.canBusData = canData;
+                
+                // CAN 데이터에 따른 시각적 효과
+                if (this.currentModel && this.isXRayMode) {
+                    this.highlightByCANData(canData);
+                }
+                
+                console.log('CAN Bus 데이터 업데이트:', canData);
+            }
+            
+            highlightByCANData(canData) {
+                // 엔진 온도에 따른 색상 변경
+                if (canData.engineTemp > 90) {
+                    // 빨간색으로 엔진 부위 강조
+                    this.highlightPart('engine', 0xff0000);
+                } else if (canData.engineTemp > 80) {
+                    // 노란색으로 경고
+                    this.highlightPart('engine', 0xffff00);
+                }
+                
+                // 타이어 압력 시각화
+                if (canData.tirePressure) {
+                    canData.tirePressure.forEach((pressure, index) => {
+                        if (pressure < 28) {
+                            this.highlightPart(`wheel_${index}`, 0xff6600);
+                        }
+                    });
+                }
+            }
+            
+            highlightPart(partName, color) {
+                if (!this.currentModel) return;
+                
+                this.currentModel.traverse((child) => {
+                    if (child.name && child.name.toLowerCase().includes(partName.toLowerCase())) {
+                        if (child.material) {
+                            child.material.emissive = new THREE.Color(color);
+                            child.material.emissiveIntensity = 0.3;
+                        }
+                    }
+                });
+            }
+            
+            // Phase 3: 터치/마우스 인터랙션 설정
+            setupTouchInteraction() {
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.selectedPart = null;
+                this.hoveredPart = null;
+                
+                // 터치/마우스 이벤트 리스너
+                const canvas = document.getElementById('canvas');
+                
+                // 터치 시작/마우스 클릭
+                const onPointerDown = (event) => {
+                    event.preventDefault();
+                    this.updatePointerPosition(event);
+                    this.handlePartSelection();
+                };
+                
+                // 터치 이동/마우스 이동
+                const onPointerMove = (event) => {
+                    event.preventDefault();
+                    this.updatePointerPosition(event);
+                    this.handlePartHover();
+                };
+                
+                // 터치 이벤트
+                canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+                canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+                
+                // 마우스 이벤트
+                canvas.addEventListener('mousedown', onPointerDown);
+                canvas.addEventListener('mousemove', onPointerMove);
+                
+                // 터치/마우스 위치 업데이트
+                this.updatePointerPosition = (event) => {
+                    const rect = canvas.getBoundingClientRect();
+                    let clientX, clientY;
+                    
+                    if (event.touches && event.touches.length > 0) {
+                        // 터치 이벤트
+                        clientX = event.touches[0].clientX;
+                        clientY = event.touches[0].clientY;
+                    } else {
+                        // 마우스 이벤트
+                        clientX = event.clientX;
+                        clientY = event.clientY;
+                    }
+                    
+                    this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                };
+                
+                console.log('Touch interaction setup complete');
+            }
+            
+            // 3D 모델 파트 선택 처리
+            handlePartSelection() {
+                if (!this.currentModel || !this.raycaster) return;
+                
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.currentModel.children, true);
+                
+                if (intersects.length > 0) {
+                    const selectedObject = intersects[0].object;
+                    this.selectPart(selectedObject);
+                    
+                    // Android로 터치 이벤트 알림
+                    if (typeof DTGAndroid !== 'undefined') {
+                        const partInfo = this.getPartInfo(selectedObject);
+                        DTGAndroid.sendMessage(`part_selected:${JSON.stringify(partInfo)}`);
+                    }
+                }
+            }
+            
+            // 파트 호버 처리
+            handlePartHover() {
+                if (!this.currentModel || !this.raycaster) return;
+                
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.currentModel.children, true);
+                
+                if (intersects.length > 0) {
+                    const hoveredObject = intersects[0].object;
+                    
+                    if (this.hoveredPart !== hoveredObject) {
+                        // 이전 호버 해제
+                        if (this.hoveredPart && this.hoveredPart !== this.selectedPart) {
+                            this.clearPartHighlight(this.hoveredPart);
+                        }
+                        
+                        // 새 파트 호버
+                        this.hoveredPart = hoveredObject;
+                        if (hoveredObject !== this.selectedPart) {
+                            this.highlightPartObject(hoveredObject, 0x00ffff, 0.2);
+                        }
+                    }
+                } else if (this.hoveredPart && this.hoveredPart !== this.selectedPart) {
+                    // 호버 해제
+                    this.clearPartHighlight(this.hoveredPart);
+                    this.hoveredPart = null;
+                }
+            }
+            
+            // 파트 선택
+            selectPart(partObject) {
+                // 이전 선택 해제
+                if (this.selectedPart) {
+                    this.clearPartHighlight(this.selectedPart);
+                }
+                
+                // 새 파트 선택
+                this.selectedPart = partObject;
+                this.highlightPartObject(partObject, 0xff6600, 0.5); // 주황색으로 강조
+                
+                // 선택된 파트 정보 표시
+                const partInfo = this.getPartInfo(partObject);
+                this.showPartInfo(partInfo);
+                
+                console.log('Part selected:', partInfo);
+            }
+            
+            // 파트 객체 하이라이트
+            highlightPartObject(partObject, color, intensity = 0.3) {
+                if (partObject.material) {
+                    if (Array.isArray(partObject.material)) {
+                        partObject.material.forEach(mat => {
+                            if (mat.emissive) {
+                                mat.emissive = new THREE.Color(color);
+                                mat.emissiveIntensity = intensity;
+                            }
+                        });
+                    } else if (partObject.material.emissive) {
+                        partObject.material.emissive = new THREE.Color(color);
+                        partObject.material.emissiveIntensity = intensity;
+                    }
+                }
+            }
+            
+            // 파트 하이라이트 제거
+            clearPartHighlight(partObject) {
+                if (partObject.material) {
+                    if (Array.isArray(partObject.material)) {
+                        partObject.material.forEach(mat => {
+                            if (mat.emissive) {
+                                mat.emissive = new THREE.Color(0x000000);
+                                mat.emissiveIntensity = 0;
+                            }
+                        });
+                    } else if (partObject.material.emissive) {
+                        partObject.material.emissive = new THREE.Color(0x000000);
+                        partObject.material.emissiveIntensity = 0;
+                    }
+                }
+            }
+            
+            // 파트 정보 추출
+            getPartInfo(partObject) {
+                return {
+                    name: partObject.name || 'Unknown Part',
+                    type: partObject.type || 'Mesh',
+                    position: {
+                        x: partObject.position.x.toFixed(2),
+                        y: partObject.position.y.toFixed(2),
+                        z: partObject.position.z.toFixed(2)
+                    },
+                    material: partObject.material ? partObject.material.name || 'Default' : 'None',
+                    timestamp: Date.now()
+                };
+            }
+            
+            // 파트 정보 표시
+            showPartInfo(partInfo) {
+                const statusPanel = document.getElementById('statusPanel');
+                if (statusPanel) {
+                    statusPanel.innerHTML = `
+                        <div class="status-item">선택된 파트: ${partInfo.name}</div>
+                        <div class="status-item">유형: ${partInfo.type}</div>
+                        <div class="status-item">위치: (${partInfo.position.x}, ${partInfo.position.y}, ${partInfo.position.z})</div>
+                    `;
+                }
+            }
+        }
+        
+        // 글로벌 함수들 (Android WebView에서 호출)
+        let dtgViewer = null;
+        
+        function updateTruckFromCANData(canData) {
+            if (dtgViewer) {
+                dtgViewer.updateTruckFromCANData(canData);
+            }
+        }
+        
+        function toggleXRayMode() {
+            if (dtgViewer) {
+                dtgViewer.toggleXRayMode();
+            }
+        }
+        
+        function rotateTruck(direction) {
+            if (dtgViewer && dtgViewer.currentModel) {
+                const rotationSpeed = direction === 'left' ? -0.2 : 0.2;
+                dtgViewer.currentModel.rotation.y += rotationSpeed;
+            }
+        }
+        
+        function focusOnPart(partName) {
+            if (dtgViewer) {
+                dtgViewer.focusOnPart(partName);
+            }
+        }
+        
+        function resetCamera() {
+            if (dtgViewer) {
+                dtgViewer.resetCamera();
+            }
+        }
+        
+        function changeWireframeColor(colorIndex) {
+            if (dtgViewer && colorIndex !== undefined) {
+                dtgViewer.currentColorIndex = colorIndex % dtgViewer.wireframeColors.length;
+                if (dtgViewer.isXRayMode) {
+                    dtgViewer.applyXRayEffect(dtgViewer.currentModel);
+                }
+            }
+        }
+        
+        function setAutoRotation(enabled) {
+            if (dtgViewer) {
+                dtgViewer.isAutoRotating = enabled;
+            }
+        }
+        
+        // 앱 시작
+        window.addEventListener('DOMContentLoaded', () => {
+            dtgViewer = new DTG3DViewer();
+        });
+    </script>
+</body>
+</html>

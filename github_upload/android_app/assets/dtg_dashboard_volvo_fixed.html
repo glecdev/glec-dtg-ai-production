@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1280, height=480, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>🚛 GLEC DTG Complete System v25.0 - Volvo Edition</title>
+    
+    <style>
+        /* DTG Design System v1.0.0 */
+        :root {
+            --dtg-primary: #00E5FF;
+            --dtg-secondary: #00FF88;
+            --dtg-danger: #FF5252;
+            --dtg-warning: #FFD740;
+            --dtg-success: #69F0AE;
+            --dtg-dark: #0A0E27;
+            --dtg-surface: #1A1F3A;
+            --dtg-glass: rgba(255, 255, 255, 0.05);
+            
+            --safety-green: #4CAF50;
+            --safety-yellow: #FFEB3B;
+            --safety-red: #F44336;
+            --safety-blue: #1976D2;
+            
+            --urgency-critical: #FF1744;
+            --urgency-high: #FF5722;
+            --urgency-medium: #FF9800;
+            --urgency-low: #4CAF50;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        *::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000000;
+            color: white;
+            overflow: hidden;
+            width: 1280px;
+            height: 480px;
+            position: relative;
+            margin: 0;
+            padding: 0;
+            transform-origin: 0 0;
+            transform: scale(1);
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+        
+        .main-container {
+            width: 1280px;
+            height: 480px;
+            display: grid;
+            grid-template-areas:
+                "sidebar header header"
+                "sidebar content content";
+            grid-template-columns: 200px 1fr;
+            grid-template-rows: 60px 1fr;
+            gap: 0;
+            transform-origin: 0 0;
+            transform: scale(1);
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+            background: linear-gradient(135deg, var(--dtg-dark) 0%, var(--dtg-surface) 100%);
+        }
+        
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--dtg-dark);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            border-right: 1px solid rgba(0, 229, 255, 0.3);
+        }
+        
+        .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        
+        .nav-menu {
+            list-style: none;
+            width: 100%;
+            flex-grow: 1;
+        }
+        
+        .nav-menu li {
+            margin-bottom: 15px;
+        }
+        
+        .nav-menu a {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .nav-menu a.active,
+        .nav-menu a:hover {
+            background-color: var(--dtg-primary);
+            color: var(--dtg-dark);
+        }
+        
+        .nav-menu a i {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        
+        .header {
+            grid-area: header;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            background: var(--dtg-surface);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.3);
+        }
+        
+        .header-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--dtg-primary);
+        }
+        
+        .header-actions button {
+            background: var(--dtg-primary);
+            color: var(--dtg-dark);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        
+        .header-actions button:hover {
+            background-color: #00B8D4;
+        }
+        
+        .content {
+            grid-area: content;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .tab-content {
+            display: none;
+            height: 100%;
+            width: 100%;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px 1fr;
+            grid-template-rows: 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        
+        .live-data-panel {
+            background: var(--dtg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .viz-panel {
+            background: linear-gradient(135deg, 
+                rgba(10, 14, 39, 0.9) 0%, 
+                rgba(26, 31, 58, 0.9) 50%,
+                rgba(0, 8, 20, 0.9) 100%);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #canvas3d {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+        }
+        
+        .ai-panel {
+            background: var(--dtg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .ai-panel::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .panel-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: var(--dtg-primary);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+            padding-bottom: 5px;
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .data-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .data-value {
+            font-weight: bold;
+            color: white;
+        }
+        
+        .ai-recommendation {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 229, 255, 0.1);
+            border-left: 3px solid var(--dtg-primary);
+            border-radius: 4px;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .ai-recommendation strong {
+            color: var(--dtg-primary);
+        }
+        
+        .voice-panel {
+            background: var(--dtg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .voice-panel .panel-title {
+            margin-bottom: 10px;
+        }
+        
+        .voice-status {
+            font-size: 0.9em;
+            color: var(--dtg-secondary);
+            margin-bottom: 5px;
+        }
+        
+        .voice-response {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 10px;
+        }
+        
+        .voice-alert {
+            font-size: 0.85em;
+            color: var(--dtg-danger);
+            font-weight: bold;
+        }
+        
+        .sub-page {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            color: rgba(255, 255, 255, 0.5);
+            background: var(--dtg-surface);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+        }
+        
+        .truck-selector-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+        
+        .truck-selector-container select {
+            background: var(--dtg-surface);
+            color: white;
+            border: 1px solid var(--dtg-primary);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .truck-selector-container select option {
+            background: var(--dtg-dark);
+            color: white;
+        }
+    </style>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="main-container">
+        <aside class="sidebar">
+            <img src="glec_logo.png" alt="GLEC DTG AI Logo" class="logo">
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="#" data-tab="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> 대시보드</a></li>
+                    <li><a href="#" data-tab="analysis"><i class="fas fa-chart-line"></i> AI 분석</a></li>
+                    <li><a href="#" data-tab="history"><i class="fas fa-history"></i> 운행 기록</a></li>
+                    <li><a href="#" data-tab="settings"><i class="fas fa-cog"></i> 설정</a></li>
+                </ul>
+            </nav>
+            <div class="system-status">
+                <p><i class="fas fa-wifi"></i> 네트워크: 연결됨</p>
+                <p><i class="fas fa-battery-full"></i> 배터리: 95%</p>
+            </div>
+        </aside>
+        
+        <header class="header">
+            <h1 id="headerTitle" class="header-title">🚛 볼보 DTG 대시보드</h1>
+            <div class="header-actions">
+                <button><i class="fas fa-bell"></i> 알림</button>
+                <button><i class="fas fa-user-circle"></i> 프로필</button>
+            </div>
+        </header>
+        
+        <main class="content">
+            <div id="dashboard" class="tab-content active">
+                <div class="dashboard-layout">
+                    <div class="live-data-panel">
+                        <h2 class="panel-title">실시간 DTG 데이터</h2>
+                        <div class="data-item"><span class="data-label">속도:</span> <span id="liveSpeed" class="data-value">0.0</span> km/h</div>
+                        <div class="data-item"><span class="data-label">RPM:</span> <span id="liveRPM" class="data-value">0</span></div>
+                        <div class="data-item"><span class="data-label">연료 잔량:</span> <span id="liveFuel" class="data-value">0.0</span> %</div>
+                        <div class="data-item"><span class="data-label">브레이크 압력:</span> <span id="liveBrake" class="data-value">0</span> kPa</div>
+                        <div class="data-item"><span class="data-label">CO2 배출량:</span> <span id="liveCO2" class="data-value">0</span> g/km</div>
+                        <div class="data-item"><span class="data-label">엔진 온도:</span> <span id="liveEngineTemp" class="data-value">0</span> °C</div>
+                        <div class="data-item"><span class="data-label">배터리 전압:</span> <span id="liveBattery" class="data-value">0.0</span> V</div>
+                        <div class="data-item"><span class="data-label">누적 주행 거리:</span> <span id="liveOdometer" class="data-value">0.0</span> km</div>
+                        <div class="data-item"><span class="data-label">오일 압력:</span> <span id="liveOilPressure" class="data-value">0</span> kPa</div>
+                        <div class="data-item"><span class="data-label">가속 페달:</span> <span id="liveAccelerator" class="data-value">0</span> %</div>
+                        <div class="data-item"><span class="data-label">기어 위치:</span> <span id="liveGear" class="data-value">P</span></div>
+                        <div class="data-item"><span class="data-label">주차 브레이크:</span> <span id="liveParkingBrake" class="data-value">OFF</span></div>
+                        <div class="data-item"><span class="data-label">안전벨트:</span> <span id="liveSeatbelt" class="data-value">OFF</span></div>
+                        <div class="data-item"><span class="data-label">위험 수준:</span> <span id="liveRiskLevel" class="data-value">0.0</span></div>
+                    </div>
+                    
+                    <div class="viz-panel">
+                        <h2 class="panel-title">🚛 볼보 트럭 3D 시각화</h2>
+                        <canvas id="canvas3d"></canvas>
+                        <div class="truck-selector-container">
+                            <select id="truckSelector">
+                                <option value="volvo1">Volvo Truck Model 1</option>
+                                <option value="volvo2">Volvo Truck Model 2</option>
+                                <option value="hyundai">Hyundai Porter</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-panel">
+                        <h2 class="panel-title">AI 분석 결과</h2>
+                        <div class="data-item"><span class="data-label">안전 운전 점수:</span> <span id="safetyScore" class="data-value">0</span></div>
+                        <div class="data-item"><span class="data-label">피로도:</span> <span id="fatigueLevel" class="data-value">낮음</span></div>
+                        <div class="data-item"><span class="data-label">돌발 상황 감지:</span> <span id="incidentDetection" class="data-value">없음</span></div>
+                        <div class="data-item"><span class="data-label">연료 효율:</span> <span id="fuelEfficiency" class="data-value">0.0</span> km/L</div>
+                        <div class="ai-recommendation">
+                            <strong>AI 추천:</strong> <span id="aiRecommendation">현재 운전 상태는 양호합니다.</span>
+                        </div>
+                        
+                        <div class="voice-panel">
+                            <h3 class="panel-title">음성 AI 에이전트</h3>
+                            <p id="voice-status" class="voice-status">대기 중...</p>
+                            <p id="voice-response" class="voice-response"></p>
+                            <p id="voice-alert" class="voice-alert"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="analysis" class="tab-content">
+                <div class="sub-page">AI 분석 페이지</div>
+            </div>
+            
+            <div id="history" class="tab-content">
+                <div class="sub-page">운행 기록 페이지</div>
+            </div>
+            
+            <div id="settings" class="tab-content">
+                <div class="sub-page">설정 페이지</div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        let scene, camera, renderer, controls, currentTruckModel;
+        
+        // 볼보 트럭 모델 경로 정의
+        const truckModels = {
+            volvo1: '3d-models/volvo_truck_1.glb',
+            volvo2: '3d-models/volvo_truck_2.glb',
+            hyundai: '3d-models/hyundai_porter.glb'
+        };
+        
+        let currentTruckType = 'volvo1'; // 기본 볼보 트럭 모델
+        
+        // 탭 전환 기능
+        document.querySelectorAll('.nav-menu a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tabName = this.dataset.tab;
+                
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+                
+                document.querySelectorAll('.nav-menu a').forEach(navLink => {
+                    navLink.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                updateHeaderTitle(tabName);
+                
+                if (tabName === 'dashboard' && !renderer) {
+                    init3D();
+                }
+            });
+        });
+        
+        function updateHeaderTitle(tabName) {
+            const titles = {
+                dashboard: '🚛 볼보 DTG 대시보드',
+                analysis: 'AI 분석',
+                history: '운행 기록',
+                settings: '설정'
+            };
+            document.getElementById('headerTitle').textContent = titles[tabName] || '🚛 볼보 DTG 대시보드';
+        }
+        
+        // 3D Visualization Functions
+        function init3D() {
+            try {
+                scene = new THREE.Scene();
+                scene.background = null;
+                
+                const container = document.getElementById('canvas3d');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+                camera.position.set(8, 4, 8);
+                
+                renderer = new THREE.WebGLRenderer({ 
+                    canvas: container,
+                    antialias: true,
+                    alpha: true
+                });
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 0.5;
+                
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 20, 10);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                scene.add(directionalLight);
+                
+                const gridHelper = new THREE.GridHelper(10, 10, 0x00E5FF, 0x003366);
+                scene.add(gridHelper);
+                
+                animate();
+                createTruckModel();
+                
+                const sel = document.getElementById('truckSelector');
+                if (sel) {
+                    sel.addEventListener('change', (e) => {
+                        currentTruckType = e.target.value;
+                        createTruckModel();
+                    });
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('3D 초기화 오류:', error);
+                return false;
+            }
+        }
+        
+        function createTruckModel() {
+            if (currentTruckModel) {
+                scene.remove(currentTruckModel);
+                currentTruckModel = null;
+            }
+            
+            const loader = new THREE.GLTFLoader();
+            const modelPath = truckModels[currentTruckType];
+            
+            console.log('🚛 볼보 트럭 모델 로딩 시작:', modelPath);
+            
+            loader.load(
+                modelPath,
+                function (gltf) {
+                    currentTruckModel = gltf.scene;
+                    
+                    const box = new THREE.Box3().setFromObject(currentTruckModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 4 / maxDim;
+                    currentTruckModel.scale.setScalar(scale);
+                    
+                    currentTruckModel.position.sub(center);
+                    currentTruckModel.position.y -= box.min.y * scale;
+                    
+                    currentTruckModel.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.material = new THREE.MeshBasicMaterial({ color: 0x00E5FF, transparent: true, opacity: 0.3, wireframe: true, wireframeLinewidth: 2 });
+                            child.castShadow = false; child.receiveShadow = false;
+                        }
+                    });
+                    
+                    scene.add(currentTruckModel);
+                    
+                    console.log('✅ 볼보 트럭 모델 로드 성공:', currentTruckType);
+                },
+                function (xhr) {
+                    const progress = (xhr.loaded / xhr.total * 100).toFixed(2);
+                    console.log('📊 모델 로딩 진행률:', progress + '%');
+                },
+                function (error) {
+                    console.error('❌ 볼보 트럭 모델 로드 실패:', error);
+                    createFallbackTruckModel();
+                }
+            );
+        }
+        
+        function createFallbackTruckModel() {
+            console.log('🔄 폴백 모델 생성 중...');
+            
+            currentTruckModel = new THREE.Group();
+            
+            const cabinGeometry = new THREE.BoxGeometry(2, 2, 2.5);
+            const cabinMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1a237e,
+                transparent: true,
+                opacity: 0.9
+            });
+            const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+            cabin.position.set(0, 1, 0);
+            cabin.castShadow = true;
+            currentTruckModel.add(cabin);
+            
+            const containerGeometry = new THREE.BoxGeometry(6, 2.5, 2.5);
+            const containerMaterial = new THREE.MeshPhongMaterial({
+                color: 0x0d47a1,
+                transparent: true,
+                opacity: 0.8
+            });
+            const container = new THREE.Mesh(containerGeometry, containerMaterial);
+            container.position.set(-3, 1.25, 0);
+            container.castShadow = true;
+            currentTruckModel.add(container);
+            
+            const chassisGeometry = new THREE.BoxGeometry(8, 0.4, 2.5);
+            const chassisMaterial = new THREE.MeshPhongMaterial({ color: 0x212121 });
+            const chassis = new THREE.Mesh(chassisGeometry, chassisMaterial);
+            chassis.position.set(0, 0.2, 0);
+            chassis.castShadow = true;
+            currentTruckModel.add(chassis);
+            
+            const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x424242 });
+            
+            const wheelPositions = [
+                { x: -3.5, y: 0.4, z: 1.0 },
+                { x: -3.5, y: 0.4, z: -1.0 },
+                { x: 3.5, y: 0.4, z: 1.0 },
+                { x: 3.5, y: 0.4, z: -1.0 }
+            ];
+            
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.castShadow = true;
+                currentTruckModel.add(wheel);
+            });
+            
+            const engineGeometry = new THREE.BoxGeometry(2, 1.5, 2.5);
+            const engineMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00E5FF,
+                emissive: 0x00E5FF,
+                emissiveIntensity: 0.4
+            });
+            const engine = new THREE.Mesh(engineGeometry, engineMaterial);
+            engine.position.set(2, 0.75, 0);
+            engine.castShadow = true;
+            currentTruckModel.add(engine);
+            
+            scene.add(currentTruckModel);
+            
+            const box = new THREE.Box3().setFromObject(currentTruckModel);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            
+            currentTruckModel.position.sub(center);
+            
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 3 / maxDim;
+            currentTruckModel.scale.setScalar(scale);
+            
+            console.log('✅ 폴백 볼보 트럭 모델 생성 완료');
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer) renderer.render(scene, camera);
+        }
+        
+        function enforce1280x480Scale() {
+            const viewport = document.querySelector('meta[name="viewport"]');
+            if (viewport) {
+                viewport.setAttribute('content', 'width=1280, height=480, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0');
+            }
+            document.body.style.width = '1280px';
+            document.body.style.height = '480px';
+            document.body.style.transform = 'scale(1)';
+            document.body.style.transformOrigin = '0 0';
+            const mainContainer = document.querySelector('.main-container');
+            if (mainContainer) {
+                mainContainer.style.width = '1280px';
+                mainContainer.style.height = '480px';
+                mainContainer.style.transform = 'scale(1)';
+                mainContainer.style.transformOrigin = '0 0';
+                mainContainer.style.position = 'absolute';
+                mainContainer.style.top = '0';
+                mainContainer.style.left = '0';
+            }
+        }
+        
+        // 안전한 데이터 파싱 함수
+        function safeParseFloat(value, defaultValue = 0) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return defaultValue;
+            }
+            return parseFloat(value) || defaultValue;
+        }
+        
+        function safeParseInt(value, defaultValue = 0) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return defaultValue;
+            }
+            return parseInt(value) || defaultValue;
+        }
+        
+        function safeString(value, defaultValue = '') {
+            if (value === null || value === undefined) {
+                return defaultValue;
+            }
+            return String(value);
+        }
+        
+        function updateDTGData(jsonData) {
+            try {
+                console.log('📊 DTG 데이터 수신:', jsonData);
+                
+                let data;
+                if (typeof jsonData === 'string') {
+                    data = JSON.parse(jsonData);
+                } else {
+                    data = jsonData;
+                }
+                
+                if (data && typeof data === 'object') {
+                    // 안전한 데이터 업데이트
+                    document.getElementById('liveSpeed').textContent = safeParseFloat(data.speed, 0).toFixed(1);
+                    document.getElementById('liveRPM').textContent = safeParseInt(data.rpm, 0).toLocaleString();
+                    document.getElementById('liveFuel').textContent = safeParseFloat(data.fuelLevel, 0).toFixed(1);
+                    document.getElementById('liveBrake').textContent = safeParseFloat(data.brakePressure, 0).toFixed(0);
+                    document.getElementById('liveCO2').textContent = safeParseFloat(data.co2Emission, 0).toFixed(0);
+                    document.getElementById('liveEngineTemp').textContent = safeParseFloat(data.engineTemp, 0).toFixed(0);
+                    document.getElementById('liveBattery').textContent = safeParseFloat(data.batteryVoltage, 0).toFixed(1);
+                    document.getElementById('liveOdometer').textContent = safeParseFloat(data.odometer, 0).toFixed(1);
+                    document.getElementById('liveOilPressure').textContent = safeParseFloat(data.oilPressure, 0).toFixed(0);
+                    document.getElementById('liveAccelerator').textContent = safeParseFloat(data.acceleratorPosition, 0).toFixed(0);
+                    document.getElementById('liveGear').textContent = safeString(data.gearPosition, 'P');
+                    document.getElementById('liveParkingBrake').textContent = data.parkingBrake ? 'ON' : 'OFF';
+                    document.getElementById('liveSeatbelt').textContent = data.seatbelt ? 'ON' : 'OFF';
+                    document.getElementById('liveRiskLevel').textContent = safeParseFloat(data.riskLevel, 0).toFixed(1);
+                    
+                    console.log('✅ DTG 데이터 업데이트 완료');
+                } else {
+                    console.warn('⚠️ DTG 데이터 형식이 올바르지 않습니다:', data);
+                }
+            } catch (error) {
+                console.error('❌ DTG 데이터 파싱 오류:', error);
+                console.log('원본 데이터:', jsonData);
+            }
+        }
+        
+        function updateAIAnalysis(jsonData) {
+            try {
+                let data;
+                if (typeof jsonData === 'string') {
+                    data = JSON.parse(jsonData);
+                } else {
+                    data = jsonData;
+                }
+                
+                if (data && typeof data === 'object') {
+                    document.getElementById('safetyScore').textContent = safeParseFloat(data.safetyScore, 0).toFixed(0);
+                    document.getElementById('fatigueLevel').textContent = safeString(data.fatigueLevel, '낮음');
+                    document.getElementById('incidentDetection').textContent = safeString(data.incidentDetection, '없음');
+                    document.getElementById('fuelEfficiency').textContent = safeParseFloat(data.fuelEfficiency, 0).toFixed(1);
+                    document.getElementById('aiRecommendation').textContent = safeString(data.aiRecommendation, '현재 운전 상태는 양호합니다.');
+                }
+            } catch (error) {
+                console.error('AI 분석 데이터 파싱 오류:', error);
+            }
+        }
+        
+        function updateVoiceCommand(jsonData) {
+            try {
+                let data;
+                if (typeof jsonData === 'string') {
+                    data = JSON.parse(jsonData);
+                } else {
+                    data = jsonData;
+                }
+                
+                if (data && typeof data === 'object') {
+                    console.log('음성 명령 업데이트:', data);
+                    
+                    if (data.command) {
+                        const voiceElement = document.getElementById('voice-status');
+                        if (voiceElement) {
+                            voiceElement.textContent = '음성 명령: ' + data.command;
+                        }
+                    }
+                    
+                    if (data.response) {
+                        const responseElement = document.getElementById('voice-response');
+                        if (responseElement) {
+                            responseElement.textContent = data.response;
+                        }
+                    }
+                    
+                    if (data.alert) {
+                        const alertElement = document.getElementById('voice-alert');
+                        if (alertElement) {
+                            alertElement.textContent = data.alert;
+                            alertElement.style.color = 'var(--dtg-danger)';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('음성 명령 데이터 파싱 오류:', error);
+            }
+        }
+        
+        // 초기화
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                enforce1280x480Scale();
+                init3D();
+            });
+        } else {
+            enforce1280x480Scale();
+            init3D();
+        }
+        
+        // 전역 함수로 등록
+        window.updateDTGData = updateDTGData;
+        window.updateAIAnalysis = updateAIAnalysis;
+        window.updateVoiceCommand = updateVoiceCommand;
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</body>
+</html>
