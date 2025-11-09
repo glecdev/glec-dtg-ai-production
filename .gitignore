@@ -1,0 +1,123 @@
+# GLEC DTG Security .gitignore (Updated 2025-08-31)
+
+# CRITICAL SECURITY - Never commit these
+*.env
+*.env.*
+!*.env.template
+*.key
+*.pem
+secrets/
+credentials/
+.security_backup*/
+
+# API Keys and Sensitive Files
+*api.txt
+*token.txt
+*secret.txt
+supabase.txt
+github\ api.txt
+vercel\ api.txt
+huggingface\ API.txt
+kaggle*.json
+
+# Submodules and large files
+Aslan-CarMaker/
+FMPy/
+PythonFMU/
+carla_client/
+data/github_can_tools/
+data/github_nox/
+
+# Python
+*.pyc
+__pycache__/
+venv/
+.venv/
+unsloth_env/
+
+# Logs and temporary
+*.log
+*.gz
+*.zip
+temp/
+tmp/
+emergency_data.json
+
+# Development
+node_modules/
+.DS_Store
+backups/
+*.db
+*.sqlite
+*.sqlite3
+
+# Services
+.vercel/
+.supabase/
+
+# Large model and data files
+*.pth
+*.pkl
+*.h5
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.glb
+*.gltf
+*.fbx
+*.obj
+*.jsonl
+models/
+vectors/
+data/raw/
+data/processed/
+data/synthetic/
+libtorch/
+gpt-oss-20b-local/
+mirror-ssd-beetle_x31/
+한국 교통안전 빅데이터/
+
+# Build outputs
+build/
+dist/
+*.apk
+*.aab
+*.ipa
+.gradle/
+.idea/
+*.iml
+
+# Large directories
+android_app/app/build/
+android_app/.gradle/
+3d truck/
+carla/
+test_download/
+test_embeddings_output/
+playwright-colab-output/
+poom-platform-output/
+colab-direct-output/
+screenshots/
+archive/
+artifacts/
+versions/
+backup*/
+emergency_backup*/
+
+# Docker and deployment
+*.tar
+*.tar.gz
+docker-compose*.yml
+Dockerfile*
+
+# Files with secrets
+CLAUDE_COMPREHENSIVE.md
+COLAB_EXECUTION_CODE.py
+GOOGLE_COLAB_DIRECT_EXECUTION.py
+GOOGLE_COLAB_EXECUTION_PLAN.md
+POOM_PLATFORM_AUTOMATION.py
+implement_highway_dashboards_v2.py
+🚀_GLEC_DTG_AI_최종_실행_가이드_완성본_v2.md
+android_app/GLEC_DTG_AI_HF_FINETUNING_SUMMARY.md
+android_app/local_jupyter_finetuning.py
